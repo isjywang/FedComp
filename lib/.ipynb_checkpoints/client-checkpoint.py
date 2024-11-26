@@ -29,11 +29,10 @@ class Client_GC():
         
         self.dataLoader = DataLoader(dataset=[self.client_graph], batch_size=args.batch_size, shuffle=False)
         
-        # 存储模型的参数，以字典的形式，其中键是参数的名称，值是参数的张量。
         self.W = {key: value for key, value in self.model.named_parameters()}
-        # 初始化一个与模型参数相同形状的零张量字典。
+
         self.dW = {key: torch.zeros_like(value) for key, value in self.model.named_parameters()}
-        # 缓存
+
         self.W_old = {key: value.data.clone() for key, value in self.model.named_parameters()}
 
         self.gconvNames = None
@@ -46,7 +45,6 @@ class Client_GC():
         self.convDWsNorm = 0.
 
     def download_from_server(self, args, server):
-        ## 将服务器上的权重的键（即模型参数的名称）存储在客户端对象的 `gconvNames` 属性中。
         self.gconvNames = server.W.keys()
         for k in server.W:
             self.W[k].data = server.W[k].data.clone()
@@ -57,14 +55,13 @@ class Client_GC():
             if '_s' in k:
                 self.W[k].data = server.W[k].data.clone()            
                 
-    def cache_weights(self): ##这个方法的目的是在客户端缓存当前的模型参数，以备后续需要进行比较或者回滚操作时使用。
-        for name in self.W.keys(): ## 对于模型的每个参数名称 `name`
-            ## 将当前参数 `self.W[name]` 的数据克隆并赋值给对应的缓存参数 `self.W_old[name]`。
+    def cache_weights(self): 
+        for name in self.W.keys(): 
             self.W_old[name].data = self.W[name].data.clone()
 
             
             
-    def reset(self): ##将模型参数重置为之前缓存的数值。
+    def reset(self):
         copy(target=self.W, source=self.W_old, keys=self.gconvNames)
 
     def local_train(self, local_epoch):
@@ -75,18 +72,9 @@ class Client_GC():
         """ For FedProx """
         train_stats = train_gc_prox(self.model, self.dataLoader, self.optimizer, local_epoch, self.args.device, self.id, self.gconvNames, self.W, mu, self.W_old)
 
-        # self.weightsNorm = torch.norm(flatten(self.W)).item()
 
-        # weights_conv = {key: self.W[key] for key in self.gconvNames}
-        # self.convWeightsNorm = torch.norm(flatten(weights_conv)).item()
-
-        # grads = {key: value.grad for key, value in self.W.items()}
-        # self.gradsNorm = torch.norm(flatten(grads)).item()
-
-        # grads_conv = {key: self.W[key].grad for key in self.gconvNames}
-        # self.convGradsNorm = torch.norm(flatten(grads_conv)).item()
         
-    def evaluate(self): ##这个函数的作用是使用测试数据对模型进行评估，并返回评估结果。
+    def evaluate(self): ##
         acc = eval_gc_nodeTask(self.model, self.dataLoader, self.args.device)
         # print("client ",self.id," acc:", acc)
         return acc
@@ -195,7 +183,7 @@ class Client_gr():
 
         self.dataLoader = DataLoader(dataset=[self.client_graph], batch_size=args.batch_size, shuffle=False)
         
-        # 存储模型的参数，以字典的形式，其中键是参数的名称，值是参数的张量。
+  
         self.W = {key: value for key, value in self.model.named_parameters()}
         self.W2 = {key: value for key, value in self.structual_model.named_parameters()}
 
@@ -271,8 +259,8 @@ class Client_gr():
         new_edge_check = new_edge_set[mask]
 
 
-        min_edges = torch.min(new_edge_check, dim=1)[0]  # 每行的最小值
-        max_edges = torch.max(new_edge_check, dim=1)[0]  # 每行的最大值
+        min_edges = torch.min(new_edge_check, dim=1)[0]  
+        max_edges = torch.max(new_edge_check, dim=1)[0] 
         sorted_new_edge_check = torch.stack((min_edges, max_edges), dim=1)    
    
         
@@ -295,10 +283,8 @@ class Client_gr():
         y_array = np.array(self.client_graph.y)
         same_class_mask = y_array[sedges[:, 0]] == y_array[sedges[:, 1]]
 
-        # 将条件组合起来
         mask_condition = mask_largest_in & mask_dif_check & same_class_mask
         
-        # 根据条件筛选出符合要求的边
         add_edges_begin = sedges[mask_condition, 0]
         add_edges_end = sedges[mask_condition, 1]
 
@@ -352,49 +338,11 @@ class Client_gr():
         self.str_time = self.str_time + str_time
         
         
-    def evaluate(self): ##这个函数的作用是使用测试数据对模型进行评估，并返回评估结果。
+    def evaluate(self):
         acc = eval_gc_nodeTask(self.model, self.dataLoader, self.args.device)
         # acc = eval_gc_nodeTask(self.structual_model, self.dataLoader, self.args.device)
         # print("client ",self.id," acc:", acc)
         return acc
-
-    # def check_homogeneous(self, homogeneous_edge):
-    #     original_homogeneous_edge = homogeneous_edge[self.id]
-        
-    #     for _, batch in enumerate(self.dataLoader):
-    #         self.optimizer.zero_grad()
-    #         batch.to(self.args.device)
-    #         embeddings = self.model(batch,observation=True)    
-
-    #     KNN_edge_index = knn_graph(embeddings, k=10, loop=False)
-    #     begin,end = KNN_edge_index[0], KNN_edge_index[1]
-
-    #     num = 0
-    #     for i in range(len(begin)):
-    #         b,e = int(begin[i]), int(end[i])
-    #         if [b,e] in original_homogeneous_edge or [e,b] in original_homogeneous_edge:
-    #             num = num + 1
-    #     return len(original_homogeneous_edge), num
-
-
-    # def check_homogeneous_2(self, homogeneous_edge):
-    #     original_homogeneous_edge = homogeneous_edge[self.id]
-        
-    #     for _, batch in enumerate(self.dataLoader):
-    #         self.optimizer.zero_grad()
-    #         batch.to(self.args.device)
-    #         label = batch.y
-    #         embeddings = self.model(batch,observation=True)    
-
-    #     KNN_edge_index = knn_graph(embeddings, k=self.args.k2, loop=False)
-    #     begin,end = KNN_edge_index[0], KNN_edge_index[1]
-
-    #     num = 0
-    #     for i in range(len(begin)):
-    #         b,e = begin[i], end[i]
-    #         if label[b] == label[e]:
-    #             num = num + 1
-    #     return len(begin), num
 
 
 
@@ -431,14 +379,13 @@ def train_gc(model, dataloaders, optimizer, local_epoch, device, client_id, is_l
                     else:
                         new_mask.append(False)
                 a1 = [i for i in range(len(batch.train_mask)) if batch.train_mask[i]]
-                ratio = 1 ## 1-ratio是训练比例
+                ratio = 1 
                 b = random.sample(a1,int(ratio*len(a1)))
                 for i in b:
                     new_mask[i]=False
                 new_mask = torch.tensor(new_mask)
                 new_mask = new_mask.cuda()
-                # a2 = [i for i in range(len(new_mask)) if new_mask[i]]      
-                # print(len(a1),len(a2))
+             
                 loss = model.loss(pred[new_mask], batch.y[new_mask])
                 loss.backward()
                 optimizer.step()
@@ -505,26 +452,7 @@ def train_fedcap(model, str_model, dataloaders, opt, opt_str, local_epoch, devic
         # acc_test.append(acc_t)
     return {'trainingLosses': [], 'trainingAccs': [], 'valLosses': [], 'valAccs': [],
             'testLosses': [], 'testAccs': []}, gnn_time, str_time
-            # if is_less:
-            #     new_mask = []
-            #     for i in range(len(batch.train_mask)):
-            #         if batch.train_mask[i]:
-            #             new_mask.append(True)
-            #         else:
-            #             new_mask.append(False)
-            #     a1 = [i for i in range(len(batch.train_mask)) if batch.train_mask[i]]
-            #     ratio = 1 ## 1-ratio是训练比例
-            #     b = random.sample(a1,int(ratio*len(a1)))
-            #     for i in b:
-            #         new_mask[i]=False
-            #     new_mask = torch.tensor(new_mask)
-            #     new_mask = new_mask.cuda()
-            #     # a2 = [i for i in range(len(new_mask)) if new_mask[i]]      
-            #     # print(len(a1),len(a2))
-            #     loss = model.loss(pred[new_mask], batch.y[new_mask])
-            #     loss.backward()
-            #     optimizer.step()
-            # else:
+
 
     
 def train_gc_prox(model, dataloaders, optimizer, local_epoch, device, client_id, gconvNames, Ws, mu, Wt):

@@ -47,31 +47,6 @@ def js_diver(P,Q):
     M=P+Q
     return 0.5*scipy.stats.entropy(P,M,base=2)+0.5*scipy.stats.entropy(Q,M,base=2)
 
-# def setup_devices(splitedData, args):
-#     idx_clients = {} # 初始化一个空字典，用于存储索引和客户端的对应关系  
-#     clients = [] # 初始化一个空列表，用于存储客户端对象 
-#     for idx, ds in enumerate(splitedData.keys()):
-#         idx_clients[idx] = ds
-#         dataloaders, num_node_features, num_graph_labels, train_size = splitedData[ds]
-        
-#         if args.alg == 'fedstar':
-#             cmodel_gc = GIN_dc(num_node_features, args.n_se, args.hidden, num_graph_labels, args.nlayer, args.dropout)
-#         else:
-#             cmodel_gc = GIN(num_node_features, args.hidden, num_graph_labels, args.nlayer, args.dropout)
-            
-#         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, cmodel_gc.parameters()), lr=args.lr, weight_decay=args.weight_decay)
-        
-#         clients.append(   Client_GC(cmodel_gc, idx, ds, train_size, dataloaders, optimizer, args)   )
-
-        
-#     if args.alg == 'fedstar':
-#         smodel = serverGIN_dc(n_se=args.n_se, nlayer=args.nlayer, nhid=args.hidden)
-#     else:
-#         smodel = serverGIN(nlayer=args.nlayer, nhid=args.hidden)
-        
-#     server = Server(smodel, args.device)
-    
-#     return clients, server, idx_clients
 
 
 def torch_load(base_dir, filename):
@@ -81,8 +56,7 @@ def torch_load(base_dir, filename):
 def get_data(args, client_id):
     return [
         torch_load(
-            "/home/1005wjy/datasets/", 
-            # f'{args.dataset}_{args.mode}_{args.train_ratio}/{args.clients}/partition_{client_id}.pt'
+            "", 
             f'{args.dataset}_{args.mode}/{args.clients}/partition_{client_id}.pt'
         )['client_data']
     ]
@@ -91,7 +65,7 @@ def get_data_init(args, client_id):
     if args.alg == "fedstar":
         return [
         torch_load(
-            "/home/1005wjy/datasets/",
+            "",
             f'{args.dataset}_{args.mode}/{args.clients}/initfedstar_{client_id}.pt'
         )['client_data']
     ]

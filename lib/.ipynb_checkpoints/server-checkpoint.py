@@ -9,7 +9,7 @@ from utils import *
 def flatten(source):
     return torch.cat([value.flatten() for value in source.values()])
     
-def from_networkx(G, group_node_attrs=None, group_edge_attrs=None): ##将一个NetworkX图转换为PyTorch Geometric数据对象
+def from_networkx(G, group_node_attrs=None, group_edge_attrs=None): 
     import networkx as nx
     from torch_geometric.data import Data
 
@@ -140,7 +140,7 @@ class Server():
                 self.W[k].data = torch.div(torch.sum(torch.stack([torch.mul(client.W[k].data, client.train_size) for client in selected_clients]), dim=0), total_size).clone()
 
 
-    def compute_pairwise_similarities(self, clients):##计算给定客户端列表中客户端之间的权重相似性
+    def compute_pairwise_similarities(self, clients):##
         client_dWs = []
         for client in clients:
             dW = {}
@@ -149,7 +149,7 @@ class Server():
             client_dWs.append(dW)
         return pairwise_angles(client_dWs)
 
-    def compute_pairwise_distances(self, seqs, standardize=False):##计算序列之间的动态时间规整（DTW）距离。
+    def compute_pairwise_distances(self, seqs, standardize=False):
         """ computes DTW distances """
         if standardize:
             # standardize to only focus on the trends
@@ -160,7 +160,7 @@ class Server():
             distances = dtw.distance_matrix(seqs)
         return distances
 
-    def min_cut(self, similarity, idc):##使用 NetworkX执行最小割算法, 将一个图分割成两个子图，使得割边的权重之和最小。
+    def min_cut(self, similarity, idc):##
         g = nx.Graph()
         for i in range(len(similarity)):
             for j in range(len(similarity)):
@@ -170,7 +170,7 @@ class Server():
         c2 = np.array([idc[x] for x in partition[1]])
         return c1, c2
 
-    def aggregate_clusterwise(self, client_clusters):##对客户端聚类进行聚合操作, 将它们的权重和梯度进行加权平均的聚合操作
+    def aggregate_clusterwise(self, client_clusters):##
         for cluster in client_clusters:
             targs = []
             sours = []
@@ -280,37 +280,16 @@ class Server_gr():
                 all_emb.append(emb)
         return all_emb
 
-    # def cka_similarity(self, x_a, x_b):  
-    # # 计算内积矩阵  
-    #     K_a = torch.matmul(x_a, x_a.t())  
-    #     K_b = torch.matmul(x_b, x_b.t())  
-          
-    #     # 计算中心化矩阵  
-    #     N = x_a.size(0)
-    #     H = torch.eye(N) - torch.ones(N, N) / N
-    #     H = H.to(self.device)
-    #     centered_K_a = torch.matmul(torch.matmul(H, K_a), H)  
-    #     centered_K_b = torch.matmul(torch.matmul(H, K_b), H)
-          
-    #     # 计算相似度  
-    #     trace_cka = torch.trace(centered_K_a @ centered_K_b)  
-    #     trace_kka = torch.sqrt(torch.trace(centered_K_a @ centered_K_a) * torch.trace(centered_K_b @ centered_K_b))  
-    #     cka = trace_cka / trace_kka  
-          
-    #     return cka
     def cka_similarity(self, x_a, x_b):  
-        # 计算内积矩阵
         K_a = torch.matmul(x_a, x_a.t())  
         K_b = torch.matmul(x_b, x_b.t())  
           
         N = x_a.size(0)
         H = self.H_matrix(N)
-    
-        # 中心化 K 矩阵
+
         centered_K_a = H @ K_a @ H
         centered_K_b = H @ K_b @ H
-    
-        # 计算相似度  
+
         trace_cka = torch.trace(centered_K_a @ centered_K_b)
         trace_kka = torch.sqrt(
             torch.trace(centered_K_a @ centered_K_a) * torch.trace(centered_K_b @ centered_K_b)
@@ -320,35 +299,11 @@ class Server_gr():
         return cka
     
     def H_matrix(self, N):
-    # 创建中心化矩阵 H，避免每次调用都重新创建
         if not hasattr(self, 'H_cache') or self.H_cache.size(0) != N:
             H = torch.eye(N, device=self.device) - torch.ones(N, N, device=self.device) / N
             self.H_cache = H
         return self.H_cache        
-        
-    # def fedcap_aggregate(self, selected_clients):
-    #     random_graph = self.build_random_graph()
-    #     embedding = self.get_embedding(selected_clients, random_graph)
-        
-    #     num_clients = len(selected_clients)
-    #     cka = torch.ones((num_clients, num_clients), device=self.device)
-        
-    #     # 批量计算 CKA 相似度：一次性计算所有客户端之间的 CKA 相似度
-    #     embeddings = torch.stack([embedding[i] for i in range(num_clients)])  # 只初始化一次
-        
-    #     cka_matrix = self.cka_similarity(embeddings, embeddings)  # 使用相同的张量进行批量计算
-    #     cka = cka_matrix.cpu()
-    
-    #     #Currently only supports selecting all clients
-    #     for i in range(self.args.clients):
-    #         for k in self.all_W[i].keys():
-    #             self.all_W[i][k].data = torch.div( torch.sum(torch.stack([torch.mul(selected_clients[client].W[k].data, cka[i][client]) for client in range(len(selected_clients))]), dim=0)  , sum(cka[i]) ).clone()
-            
-    #     total_size = 0
-    #     for client in selected_clients:
-    #         total_size += client.train_size
-    #     for q in self.W2.keys():
-    #         self.W2[q].data = torch.div(torch.sum(torch.stack([torch.mul(client.W2[q].data, client.train_size) for client in selected_clients]), dim=0), total_size).clone()
+  
         
     def fedcap_aggregate(self, selected_clients):
         embedding = self.get_embedding(selected_clients, self.random_graph)
